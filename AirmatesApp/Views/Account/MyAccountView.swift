@@ -241,5 +241,3 @@ struct MyAccountView: View {
         }
     }
 }
-
-extension Checkout: Identifiable {}
