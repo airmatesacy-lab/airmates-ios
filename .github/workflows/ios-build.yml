@@ -32,23 +32,23 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build for iOS Simulator (Debug)
+      - name: Build for iOS (Debug)
         run: |
           set -o pipefail
           xcodebuild build \
             -project AirmatesApp.xcodeproj \
             -scheme AirmatesApp \
             -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
             2>&1 | tee /tmp/build.log | xcpretty --color; exit ${PIPESTATUS[0]}
 
       - name: Show build errors on failure
         if: failure()
-        run: grep -A2 "error:" /tmp/build.log || cat /tmp/build.log | tail -100
+        run: grep -A2 "error:" /tmp/build.log || tail -100 /tmp/build.log
 
-      - name: Build for iOS Device (Release, unsigned)
+      - name: Build for iOS (Release, unsigned)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           set -o pipefail
@@ -59,4 +59,8 @@ jobs:
             -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_ALLOWED=NO \
-            2>&1 | xcpretty --color; exit ${PIPESTATUS[0]}
+            2>&1 | tee /tmp/build-release.log | xcpretty --color; exit ${PIPESTATUS[0]}
+
+      - name: Show release build errors on failure
+        if: failure()
+        run: grep -A2 "error:" /tmp/build-release.log 2>/dev/null || true
