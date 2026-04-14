@@ -2,10 +2,12 @@ import Foundation
 
 struct Instructor: Codable, Identifiable, Hashable {
     let id: String
-    var userId: String
+    var userId: String?
     var hourlyRate: Double?
-    var specialties: String?
-    var available: Bool
+    var specialties: [String]?
+    var bio: String?
+    var available: Bool?
+    var organizationId: String?
 
     // Relationships
     var user: InstructorUser?

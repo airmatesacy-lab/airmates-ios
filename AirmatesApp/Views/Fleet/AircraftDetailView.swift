@@ -17,18 +17,18 @@ struct AircraftDetailView: View {
                     Text(aircraft.type)
                         .font(.title3)
                         .foregroundColor(.secondary)
-                    StatusBadge(status: aircraft.status)
+                    StatusBadge(status: aircraft.status ?? "UNKNOWN")
                 }
                 .padding()
 
                 // Info cards
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    infoCard("Tach", value: String(format: "%.1f", aircraft.tachCurrent), icon: "gauge")
-                    infoCard("Rate", value: aircraft.hourlyRate.asCurrency + "/hr", icon: "dollarsign.circle")
+                    infoCard(aircraft.meterType == "HOBBS" ? "Hobbs" : "Tach", value: String(format: "%.1f", aircraft.tachCurrent ?? 0), icon: "gauge")
+                    infoCard("Rate", value: (aircraft.hourlyRate ?? 0).asCurrency + "/hr", icon: "dollarsign.circle")
                     if let year = aircraft.year {
                         infoCard("Year", value: "\(year)", icon: "calendar")
                     }
-                    infoCard("Status", value: aircraft.status.replacingOccurrences(of: "_", with: " "), icon: "circle.fill")
+                    infoCard("Status", value: (aircraft.status ?? "UNKNOWN").replacingOccurrences(of: "_", with: " "), icon: "circle.fill")
                 }
 
                 // Squawks
@@ -39,10 +39,10 @@ struct AircraftDetailView: View {
                         ForEach(squawks) { squawk in
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(squawk.description)
+                                    Text(squawk.description ?? "")
                                         .font(.subheadline)
                                     HStack {
-                                        Text(squawk.category)
+                                        Text(squawk.category ?? "")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                         Text("•")
@@ -53,7 +53,7 @@ struct AircraftDetailView: View {
                                     }
                                 }
                                 Spacer()
-                                StatusBadge(status: squawk.status)
+                                StatusBadge(status: squawk.status ?? "OPEN")
                             }
                             .padding(.vertical, 4)
                         }
@@ -92,14 +92,14 @@ struct AircraftDetailView: View {
                 }
 
                 // Maintenance
-                if let maintenance = aircraft.maintenance?.filter({ !$0.completed }), !maintenance.isEmpty {
+                if let maintenance = aircraft.maintenance?.filter({ $0.completed != true }), !maintenance.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Upcoming Maintenance")
                             .font(.headline)
                         ForEach(maintenance) { item in
                             HStack {
                                 VStack(alignment: .leading) {
-                                    Text(item.type)
+                                    Text(item.type ?? "Maintenance")
                                         .font(.subheadline.bold())
                                     if let desc = item.description {
                                         Text(desc)

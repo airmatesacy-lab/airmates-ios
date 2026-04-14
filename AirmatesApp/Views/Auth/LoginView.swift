@@ -4,8 +4,10 @@ struct LoginView: View {
     @Environment(AppState.self) private var appState
     @State private var email = ""
     @State private var password = ""
+    @State private var rememberEmail = true
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showBiometric = false
     @FocusState private var focusedField: Field?
 
     enum Field { case email, password }
@@ -99,16 +101,39 @@ struct LoginView: View {
                         }
                         .disabled(isLoading || email.isEmpty || password.isEmpty)
                         .opacity(email.isEmpty || password.isEmpty ? 0.6 : 1)
+
+                        // Remember email toggle
+                        Toggle(isOn: $rememberEmail) {
+                            Text("Remember email")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        .tint(.brandBlue)
                     }
                     .padding(24)
                     .background(Color.white.opacity(0.05))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    // Face ID button (below form, purely additive)
+                    if showBiometric {
+                        Button {
+                            biometricLogin()
+                        } label: {
+                            HStack {
+                                Image(systemName: BiometricService.shared.biometricIcon)
+                                Text("Sign in with \(BiometricService.shared.biometricName)")
+                            }
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(12)
+                        }
+                    }
 
                     Spacer()
                 }
                 .padding(.horizontal, 32)
             }
         }
+        .onAppear { checkBiometricAvailability() }
     }
 
     private func login() {
@@ -120,12 +145,47 @@ struct LoginView: View {
         Task {
             do {
                 try await appState.login(email: email, password: password)
+                // Save email if remember is on
+                if rememberEmail {
+                    KeychainManager.shared.saveEmail(email)
+                } else {
+                    KeychainManager.shared.deleteEmail()
+                }
             } catch let error as APIError {
                 errorMessage = error.errorDescription
             } catch {
                 errorMessage = error.localizedDescription
             }
             isLoading = false
+        }
+    }
+
+    private func biometricLogin() {
+        Task {
+            let authenticated = await BiometricService.shared.authenticate()
+            guard authenticated else { return }
+
+            // Biometric success — try to refresh existing token
+            isLoading = true
+            do {
+                let response = try await AuthService.shared.refreshToken()
+                KeychainManager.shared.saveToken(response.token)
+                appState.currentUser = response.user
+                appState.isAuthenticated = true
+            } catch {
+                errorMessage = "Session expired. Please sign in with your password."
+            }
+            isLoading = false
+        }
+    }
+
+    private func checkBiometricAvailability() {
+        // Show Face ID button only if biometrics available AND we have a stored token
+        showBiometric = BiometricService.shared.isAvailable && KeychainManager.shared.getToken() != nil
+
+        // Pre-fill email if remembered
+        if let savedEmail = KeychainManager.shared.getEmail() {
+            email = savedEmail
         }
     }
 }

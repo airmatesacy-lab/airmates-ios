@@ -192,7 +192,7 @@ struct MyAccountView: View {
                                 VStack(alignment: .trailing) {
                                     Text(flight.hobbsTime.asHours)
                                         .font(.subheadline)
-                                    Text(flight.amount.asCurrency)
+                                    Text((flight.amount ?? 0).asCurrency)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }

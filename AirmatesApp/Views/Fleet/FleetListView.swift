@@ -62,11 +62,11 @@ struct AircraftRow: View {
             // Aircraft icon with status color
             ZStack {
                 Circle()
-                    .fill(Color.statusColor(aircraft.status).opacity(0.15))
+                    .fill(Color.statusColor(aircraft.status ?? "UNKNOWN").opacity(0.15))
                     .frame(width: 48, height: 48)
                 Image(systemName: "airplane")
                     .font(.title3)
-                    .foregroundColor(Color.statusColor(aircraft.status))
+                    .foregroundColor(Color.statusColor(aircraft.status ?? "UNKNOWN"))
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -76,18 +76,20 @@ struct AircraftRow: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 HStack(spacing: 8) {
-                    Text("Tach: \(String(format: "%.1f", aircraft.tachCurrent))")
+                    Text("\(aircraft.meterType == "HOBBS" ? "Hobbs" : "Tach"): \(String(format: "%.1f", aircraft.tachCurrent ?? 0))")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(aircraft.hourlyRate.asCurrency + "/hr")
-                        .font(.caption)
-                        .foregroundColor(.brandBlue)
+                    if let rate = aircraft.hourlyRate {
+                        Text(rate.asCurrency + "/hr")
+                            .font(.caption)
+                            .foregroundColor(.brandBlue)
+                    }
                 }
             }
 
             Spacer()
 
-            StatusBadge(status: aircraft.status)
+            StatusBadge(status: aircraft.status ?? "UNKNOWN")
         }
         .padding(.vertical, 4)
     }

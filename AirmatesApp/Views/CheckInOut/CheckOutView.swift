@@ -22,7 +22,7 @@ struct CheckOutView: View {
                         Picker("Aircraft", selection: $selectedAircraftId) {
                             Text("Select...").tag("")
                             ForEach(aircraft.filter { $0.isAvailable }) { ac in
-                                Text("\(ac.tailNumber) — \(ac.type) (Tach: \(String(format: "%.1f", ac.tachCurrent)))").tag(ac.id)
+                                Text("\(ac.tailNumber) — \(ac.type) (Tach: \(String(format: "%.1f", ac.tachCurrent ?? 0)))").tag(ac.id)
                             }
                         }
                     }
@@ -61,7 +61,7 @@ struct CheckOutView: View {
             }
             .onChange(of: selectedAircraftId) { _, newId in
                 if let ac = aircraft.first(where: { $0.id == newId }) {
-                    tachOut = String(format: "%.1f", ac.tachCurrent)
+                    tachOut = String(format: "%.1f", ac.tachCurrent ?? 0)
                 }
             }
         }

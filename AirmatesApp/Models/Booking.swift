@@ -30,9 +30,10 @@ struct Booking: Codable, Identifiable, Hashable {
     }
 }
 
-struct BookingMember: Codable, Identifiable, Hashable {
-    let id: String
+struct BookingMember: Codable, Hashable {
+    var id: String?
     var name: String
     var email: String?
     var phone: String?
+    var role: String?
 }

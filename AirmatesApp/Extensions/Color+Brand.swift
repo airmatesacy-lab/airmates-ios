@@ -6,6 +6,8 @@ extension Color {
     static let brandOrange = Color(red: 232/255, green: 145/255, blue: 58/255) // #e8913a
     static let brandGreen = Color(red: 34/255, green: 197/255, blue: 94/255)
     static let brandRed = Color(red: 239/255, green: 68/255, blue: 68/255)
+    static let brandTeal = Color(red: 6/255, green: 182/255, blue: 212/255) // #06b6d4 — "my booking"
+    static let brandPurple = Color(red: 139/255, green: 92/255, blue: 246/255) // #8b5cf6
     static let cardBackground = Color(.systemBackground)
     static let subtleBackground = Color(.secondarySystemBackground)
 }
@@ -25,6 +27,16 @@ extension Color {
         case "IN_PROGRESS": return .brandOrange
         case "RESOLVED": return .brandGreen
         default: return .secondary
+        }
+    }
+
+    /// Color for booking type (SOLO, DUAL, MAINTENANCE)
+    static func bookingTypeColor(_ type: String) -> Color {
+        switch type.uppercased() {
+        case "SOLO": return .brandBlue
+        case "DUAL": return .brandPurple
+        case "MAINTENANCE": return .brandOrange
+        default: return .brandBlue
         }
     }
 }

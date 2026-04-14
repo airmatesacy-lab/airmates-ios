@@ -1,7 +1,9 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct AirmatesApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @State private var appState = AppState()
 
     var body: some Scene {
@@ -19,8 +21,59 @@ struct AirmatesApp: App {
             }
             .task {
                 await appState.checkAuth()
+                // Register notification categories
+                NotificationService.shared.registerCategories()
+                // Request notification permission if authenticated
+                if appState.isAuthenticated {
+                    _ = await NotificationService.shared.requestPermission()
+                }
             }
         }
+    }
+}
+
+// MARK: - App Delegate for APNs
+
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        application.registerForRemoteNotifications()
+        return true
+    }
+
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        Task {
+            await NotificationService.shared.uploadDeviceToken(deviceToken)
+        }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        // Push registration failed — silently ignore (push is optional)
+    }
+
+    // Handle notification when app is in foreground
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        return [.banner, .badge, .sound]
+    }
+
+    // Handle notification tap (just opens app for now — deep linking in v1.0 (3))
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        // Future: navigate to specific tab based on notification category
     }
 }
 

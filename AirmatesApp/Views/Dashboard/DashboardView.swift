@@ -38,18 +38,18 @@ struct DashboardView: View {
             VStack(spacing: 20) {
                 // Stats grid
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    StatCard(title: "Aircraft", value: "\(data.aircraftCount)", icon: "airplane", color: .brandBlue)
-                    StatCard(title: "Currently Out", value: "\(data.activeCheckouts)", icon: "paperplane.fill", color: data.activeCheckouts > 0 ? .brandOrange : .brandGreen)
-                    StatCard(title: "Members", value: "\(data.memberCount)", icon: "person.3", color: .brandBlue)
-                    StatCard(title: "Instructors", value: "\(data.instructorCount)", icon: "graduationcap", color: .purple)
+                    StatCard(title: "Aircraft", value: "\(data.aircraftCount ?? 0)", icon: "airplane", color: .brandBlue)
+                    StatCard(title: "Currently Out", value: "\(data.activeCheckouts ?? 0)", icon: "paperplane.fill", color: (data.activeCheckouts ?? 0) > 0 ? .brandOrange : .brandGreen)
+                    StatCard(title: "Members", value: "\(data.memberCount ?? 0)", icon: "person.3", color: .brandBlue)
+                    StatCard(title: "Instructors", value: "\(data.instructorCount ?? 0)", icon: "graduationcap", color: .purple)
                 }
 
                 // My upcoming bookings
-                if !data.myUpcomingBookings.isEmpty {
+                if let myBookings = data.myUpcomingBookings, !myBookings.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("My Upcoming Bookings")
                             .font(.headline)
-                        ForEach(data.myUpcomingBookings) { booking in
+                        ForEach(myBookings) { booking in
                             BookingRow(booking: booking)
                         }
                     }
@@ -63,13 +63,13 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Today's Flights")
                         .font(.headline)
-                    if data.todayBookings.isEmpty {
+                    if (data.todayBookings ?? []).isEmpty {
                         Text("No flights scheduled today")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .padding(.vertical, 8)
                     } else {
-                        ForEach(data.todayBookings) { booking in
+                        ForEach(data.todayBookings ?? []) { booking in
                             BookingRow(booking: booking)
                         }
                     }
@@ -80,11 +80,11 @@ struct DashboardView: View {
                 .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
 
                 // Active checkouts
-                if !data.recentCheckouts.isEmpty {
+                if !(data.recentCheckouts ?? []).isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Aircraft Currently Out")
                             .font(.headline)
-                        ForEach(data.recentCheckouts) { checkout in
+                        ForEach(data.recentCheckouts ?? []) { checkout in
                             HStack {
                                 VStack(alignment: .leading) {
                                     Text(checkout.aircraft?.tailNumber ?? "Unknown")

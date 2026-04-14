@@ -2,12 +2,13 @@ import Foundation
 
 struct Squawk: Codable, Identifiable, Hashable {
     let id: String
-    var aircraftId: String
-    var reporterId: String
-    var description: String
-    var category: String
-    var priority: String
-    var status: String // OPEN, IN_PROGRESS, RESOLVED
+    var aircraftId: String?
+    var reporterId: String?
+    var description: String?
+    var category: String?
+    var priority: String?
+    var status: String? // OPEN, IN_PROGRESS, RESOLVED
+    var imageUrl: String?
     var resolution: String?
     var resolvedAt: String?
     var resolvedById: String?
@@ -20,9 +21,9 @@ struct Squawk: Codable, Identifiable, Hashable {
 }
 
 struct SquawkReporter: Codable, Hashable {
-    var name: String
+    var name: String?
 }
 
 struct SquawkAircraft: Codable, Hashable {
-    var tailNumber: String
+    var tailNumber: String?
 }

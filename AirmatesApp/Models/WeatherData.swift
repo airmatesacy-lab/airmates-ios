@@ -4,37 +4,40 @@ struct WeatherData: Codable {
     var icao: String?
     var metar: String?
     var parsed: ParsedMetar?
+    var minimums: WeatherMinimums?
     var goNoGo: Bool?
     var issues: [String]?
     var hasMinimums: Bool?
 }
 
+struct WeatherMinimums: Codable {
+    var wxMinCeiling: Int?
+    var wxMinVisibility: Double?
+    var wxMaxWind: Int?
+    var wxMaxCrosswind: Int?
+}
+
 struct ParsedMetar: Codable {
-    var ceiling: Int?
+    var ceiling: Double?
     var visibility: Double?
-    var windSpeed: Int?
-    var windDirection: Int?
-    var gustSpeed: Int?
-    var temperature: Int?
-    var dewpoint: Int?
+    var windSpeed: Double?
+    var windDir: Double?       // API returns "windDir" not "windDirection"
+    var gustSpeed: Double?
+    var temp: Double?           // API returns "temp" not "temperature"
+    var dewp: Double?           // API returns "dewp" not "dewpoint"
+    var dewpoint: Double?       // Some responses use full name
     var altimeter: Double?
     var flightCategory: String? // VFR, MVFR, IFR, LIFR
 
-    var flightCategoryColor: String {
-        switch flightCategory {
-        case "VFR": return "green"
-        case "MVFR": return "blue"
-        case "IFR": return "red"
-        case "LIFR": return "purple"
-        default: return "gray"
-        }
-    }
+    // Computed accessors with friendly names
+    var temperature: Int? { temp != nil ? Int(temp!) : nil }
+    var windDirection: Int? { windDir != nil ? Int(windDir!) : nil }
 
     var windDescription: String {
-        guard let dir = windDirection, let spd = windSpeed else { return "Calm" }
+        guard let dir = windDir, let spd = windSpeed else { return "Calm" }
         if let gust = gustSpeed {
-            return "\(dir)@\(spd)G\(gust)"
+            return "\(Int(dir))@\(Int(spd))G\(Int(gust))"
         }
-        return "\(dir)@\(spd)"
+        return "\(Int(dir))@\(Int(spd))"
     }
 }

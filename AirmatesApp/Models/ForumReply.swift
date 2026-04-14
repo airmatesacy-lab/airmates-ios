@@ -11,4 +11,6 @@ struct ForumReply: Codable, Identifiable, Hashable {
 
     // Relationships
     var member: BookingMember?
+    var childReplies: [ForumReply]?
+    var reactions: [ForumReaction]?
 }

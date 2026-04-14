@@ -2,28 +2,39 @@ import SwiftUI
 
 struct MainTabView: View {
     @Environment(AppState.self) private var appState
+    @State private var selectedTab = "today"
 
     var body: some View {
-        TabView {
-            DashboardView()
+        TabView(selection: $selectedTab) {
+            TodayView()
                 .tabItem {
-                    Label("Dashboard", systemImage: "gauge.with.dots.needle.33percent")
+                    Label("Today", systemImage: "sun.max")
                 }
+                .tag("today")
+
+            ScheduleViewV2()
+                .tabItem {
+                    Label("Schedule", systemImage: "calendar")
+                }
+                .tag("schedule")
+
+            FlyView()
+                .tabItem {
+                    Label("Fly", systemImage: "airplane.departure")
+                }
+                .tag("fly")
 
             FleetListView()
                 .tabItem {
                     Label("Fleet", systemImage: "airplane")
                 }
+                .tag("fleet")
 
-            ScheduleView()
+            MoreView()
                 .tabItem {
-                    Label("Schedule", systemImage: "calendar")
+                    Label("More", systemImage: "ellipsis")
                 }
-
-            MyAccountView()
-                .tabItem {
-                    Label("Account", systemImage: "person.crop.circle")
-                }
+                .tag("more")
         }
         .tint(.brandBlue)
     }
