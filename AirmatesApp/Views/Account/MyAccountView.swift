@@ -2,7 +2,6 @@ import SwiftUI
 
 struct MyAccountView: View {
     @Environment(AppState.self) private var appState
-    @Environment(\.openURL) private var openURL
     @State private var data: MyAccountData?
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -10,6 +9,7 @@ struct MyAccountView: View {
     @State private var showCheckIn: Checkout?
     @State private var activeCheckouts: [Checkout] = []
     @State private var showEditProfile = false
+    @State private var showPayment = false
 
     var body: some View {
         NavigationStack {
@@ -54,6 +54,14 @@ struct MyAccountView: View {
                     ProfileEditView(user: user) { loadData() }
                 }
             }
+            .sheet(isPresented: $showPayment) {
+                if let balance = data?.balance, balance < -0.01 {
+                    PayBalanceSheet(balanceDueDollars: abs(balance)) {
+                        loadData()
+                    }
+                    .environment(appState)
+                }
+            }
             .refreshable { await fetchData() }
         }
         .task { await fetchData() }
@@ -79,10 +87,7 @@ struct MyAccountView: View {
                     // Pay Balance button — only when real balance is owed
                     if displayBalance < -0.01 {
                         Button {
-                            if let slug = appState.currentUser?.orgSlug,
-                               let url = URL(string: "https://airmatesacy.com/\(slug)#my-account") {
-                                openURL(url)
-                            }
+                            showPayment = true
                         } label: {
                             Label("Pay Balance", systemImage: "creditcard")
                                 .font(.subheadline.bold())
