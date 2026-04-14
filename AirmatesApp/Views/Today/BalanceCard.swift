@@ -15,11 +15,12 @@ struct BalanceCard: View {
             }
 
             HStack {
+                let displayBal = abs(balance) < 0.01 ? 0.0 : balance
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(String(format: "$%.2f", abs(balance)))
+                    Text(String(format: "$%.2f", abs(displayBal)))
                         .font(.title2.bold())
-                        .foregroundColor(balance > 0 ? .red : balance < 0 ? .green : .primary)
-                    Text(balance > 0 ? "Balance due — tap to pay" : balance < 0 ? "Credit" : "Paid up")
+                        .foregroundColor(displayBal > 0 ? .red : displayBal < 0 ? .green : .primary)
+                    Text(displayBal > 0 ? "Balance due — tap to pay" : displayBal < 0 ? "Credit" : "Paid up")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

@@ -132,9 +132,9 @@ struct ScheduleViewV2: View {
             )
         } else {
             List {
-                ForEach(groupedBookings.keys.sorted(), id: \.self) { dateKey in
-                    Section(dateKey) {
-                        ForEach(groupedBookings[dateKey] ?? []) { booking in
+                ForEach(sortedGroupedBookings, id: \.date) { group in
+                    Section(group.label) {
+                        ForEach(group.bookings) { booking in
                             BookingRowV2(booking: booking, currentUserId: appState.currentUser?.id)
                                 .contentShape(Rectangle())
                                 .onTapGesture { selectedBooking = booking }
@@ -172,20 +172,30 @@ struct ScheduleViewV2: View {
         .listStyle(.plain)
     }
 
-    var groupedBookings: [String: [Booking]] {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
+    struct BookingGroup {
+        let date: Date
+        let label: String
+        let bookings: [Booking]
+    }
+
+    /// Groups bookings by date, sorted chronologically (not alphabetically)
+    var sortedGroupedBookings: [BookingGroup] {
         let display = DateFormatter()
         display.dateFormat = "EEEE, MMM d"
 
-        var groups: [String: [Booking]] = [:]
-        for booking in viewModel.monthBookings.sorted(by: { $0.startDate < $1.startDate }) {
+        var dateMap: [String: (date: Date, bookings: [Booking])] = [:]
+        for booking in viewModel.monthBookings {
             if let date = DateFormatter.apiDate.date(from: booking.startDate) {
-                let key = display.string(from: date)
-                groups[key, default: []].append(booking)
+                let key = booking.startDate // yyyy-MM-dd — sortable
+                if dateMap[key] != nil {
+                    dateMap[key]!.bookings.append(booking)
+                } else {
+                    dateMap[key] = (date: date, bookings: [booking])
+                }
             }
         }
-        return groups
+        return dateMap.sorted { $0.value.date < $1.value.date }
+            .map { BookingGroup(date: $0.value.date, label: display.string(from: $0.value.date), bookings: $0.value.bookings) }
     }
 
     func isSelectedDate(_ dateStr: String) -> Bool {

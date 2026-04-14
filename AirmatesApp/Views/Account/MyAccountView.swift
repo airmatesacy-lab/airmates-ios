@@ -1,17 +1,8 @@
 import SwiftUI
-import SafariServices
-
-/// Wraps SFSafariViewController for in-app web payment
-struct SafariView: UIViewControllerRepresentable {
-    let url: URL
-    func makeUIViewController(context: Context) -> SFSafariViewController {
-        SFSafariViewController(url: url)
-    }
-    func updateUIViewController(_ vc: SFSafariViewController, context: Context) {}
-}
 
 struct MyAccountView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.openURL) private var openURL
     @State private var data: MyAccountData?
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -19,7 +10,6 @@ struct MyAccountView: View {
     @State private var showCheckIn: Checkout?
     @State private var activeCheckouts: [Checkout] = []
     @State private var showEditProfile = false
-    @State private var showPaymentWeb = false
 
     var body: some View {
         NavigationStack {
@@ -64,13 +54,6 @@ struct MyAccountView: View {
                     ProfileEditView(user: user) { loadData() }
                 }
             }
-            .sheet(isPresented: $showPaymentWeb) {
-                if let slug = appState.currentUser?.orgSlug {
-                    SafariView(url: URL(string: "https://airmatesacy.com/\(slug)/account")!)
-                        .ignoresSafeArea()
-                        .onDisappear { loadData() }
-                }
-            }
             .refreshable { await fetchData() }
         }
         .task { await fetchData() }
@@ -82,20 +65,24 @@ struct MyAccountView: View {
             VStack(spacing: 20) {
                 // Balance card
                 VStack(spacing: 8) {
+                    let displayBalance = abs(data.balance) < 0.01 ? 0.0 : data.balance
                     Text("Account Balance")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    Text(data.balance.asCurrency)
+                    Text(String(format: "$%.2f", abs(displayBalance)))
                         .font(.system(size: 40, weight: .bold, design: .rounded))
-                        .foregroundColor(data.balance >= 0 ? .brandGreen : .brandRed)
-                    Text(data.balance >= 0 ? "Credit" : "Amount Due")
+                        .foregroundColor(displayBalance > 0 ? .brandGreen : displayBalance < 0 ? .brandRed : .primary)
+                    Text(displayBalance > 0 ? "Credit" : displayBalance < 0 ? "Amount Due" : "Paid Up")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    // Pay Balance button — visible when balance is owed
-                    if data.balance < 0 {
+                    // Pay Balance button — only when real balance is owed
+                    if displayBalance < -0.01 {
                         Button {
-                            showPaymentWeb = true
+                            if let slug = appState.currentUser?.orgSlug,
+                               let url = URL(string: "https://airmatesacy.com/\(slug)#my-account") {
+                                openURL(url)
+                            }
                         } label: {
                             Label("Pay Balance", systemImage: "creditcard")
                                 .font(.subheadline.bold())
