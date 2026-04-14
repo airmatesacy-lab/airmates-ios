@@ -23,6 +23,12 @@ struct Checkout: Codable, Identifiable, Hashable {
     // Relationships
     var aircraft: Aircraft?
     var member: BookingMember?
+    /// Linked booking (id + type). Backend populates this via the auto-link at
+    /// check-out time and returns it in GET/POST /api/checkouts responses.
+    /// Optional because older backends and unmatched checkouts return null.
+    /// The iOS app uses this to preload the flight type picker on check-in
+    /// so members don't have to re-pick SOLO/DUAL/MAINTENANCE.
+    var booking: LinkedBooking?
 
     var isOut: Bool { status == "OUT" }
 
@@ -39,6 +45,13 @@ struct Checkout: Codable, Identifiable, Hashable {
         let minutes = (Int(elapsed) % 3600) / 60
         return "\(hours)h \(minutes)m"
     }
+}
+
+/// Minimal booking shape returned nested inside a Checkout. Matches the
+/// backend's `include: { booking: { select: { id: true, type: true } } }`.
+struct LinkedBooking: Codable, Hashable {
+    let id: String
+    let type: String // SOLO | DUAL | MAINTENANCE
 }
 
 struct CheckoutResponse: Codable {

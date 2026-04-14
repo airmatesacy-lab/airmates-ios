@@ -56,10 +56,21 @@ struct CheckInSheet: View {
                         .padding(.horizontal)
                     }
 
-                    // Flight type
+                    // Flight type — preloaded from the linked booking when available
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Flight Type")
-                            .font(.headline)
+                        HStack {
+                            Text("Flight Type")
+                                .font(.headline)
+                            if checkout.booking != nil {
+                                Text("from booking")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(4)
+                            }
+                        }
                         Picker("Type", selection: $viewModel.flightType) {
                             Text("Solo").tag("SOLO")
                             Text("Dual").tag("DUAL")
@@ -151,6 +162,16 @@ struct CheckInSheet: View {
             } message: {
                 if let delta = tachDelta {
                     Text("Tach Out: \(String(format: "%.1f", checkout.tachOut)) \u{2192} Tach In: \(viewModel.tachIn)\nFlight time: \(String(format: "%.1f", delta)) hours\n\nIs this correct?")
+                }
+            }
+            .task {
+                // Preload flight type from the booking linked to this checkout.
+                // Backend auto-links bookings on check-out and returns the nested
+                // booking in the /api/checkouts response (see Checkout.booking).
+                // No override if backend hasn't shipped yet — booking will be nil
+                // and we fall through to the viewModel's default ("SOLO").
+                if let bookingType = checkout.booking?.type {
+                    viewModel.flightType = bookingType
                 }
             }
         }

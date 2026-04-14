@@ -115,6 +115,18 @@ struct ActiveFlightCard: View {
             Text("\(checkout.aircraft?.tailNumber ?? "") \u{2022} \(checkout.aircraft?.type ?? "")")
                 .font(.title3)
 
+            // Booking type badge — pulled from the linked booking so the pilot
+            // sees Solo/Dual/Maintenance at a glance without opening check-in.
+            if let bookingType = checkout.booking?.type {
+                Text(bookingType)
+                    .font(.caption.bold())
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.bookingTypeBadgeColor(bookingType).opacity(0.12))
+                    .foregroundColor(Color.bookingTypeBadgeColor(bookingType))
+                    .cornerRadius(6)
+            }
+
             Text(checkout.elapsedTimeFormatted)
                 .font(.system(.largeTitle, design: .monospaced).bold())
                 .foregroundColor(.brandBlue)
