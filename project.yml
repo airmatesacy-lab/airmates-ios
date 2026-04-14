@@ -5,6 +5,11 @@ options:
     iOS: "17.0"
   xcodeVersion: "16.1"
 
+packages:
+  Stripe:
+    url: https://github.com/stripe/stripe-ios
+    from: "25.11.0"
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -45,22 +50,47 @@ targets:
     platform: iOS
     sources:
       - path: AirmatesApp
+    dependencies:
+      - package: Stripe
+        product: StripePaymentSheet
+    info:
+      path: AirmatesApp/Info.plist
+      properties:
+        CFBundleDisplayName: Airmates
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UIApplicationSupportsIndirectInputEvents: true
+        UILaunchScreen:
+          UIColorName: ""
+          UIImageName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSFaceIDUsageDescription: Sign in to Airmates securely with Face ID
+        CFBundleIconName: AppIcon
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: com.airmates.app
+            CFBundleURLSchemes:
+              - airmates
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.airmates.app
-        CURRENT_PROJECT_VERSION: 2
+        CURRENT_PROJECT_VERSION: 6
         MARKETING_VERSION: "1.0"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: V34FFS732V
-        GENERATE_INFOPLIST_FILE: "YES"
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
-        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: "YES"
-        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_NSFaceIDUsageDescription: "Sign in to Airmates securely with Face ID"
+        GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: AirmatesApp/AirmatesApp.entitlements
-        INFOPLIST_KEY_CFBundleIconName: AppIcon
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: "YES"
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor

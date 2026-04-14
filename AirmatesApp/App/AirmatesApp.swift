@@ -1,10 +1,18 @@
 import SwiftUI
 import UserNotifications
+import StripePaymentSheet
 
 @main
 struct AirmatesApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @State private var appState = AppState()
+
+    init() {
+        // Configure Stripe SDK once at launch — must happen before any
+        // PaymentSheet is constructed. Safe to call from init since
+        // StripeAPI.defaultPublishableKey is a simple global setter.
+        StripeService.shared.configure()
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -26,6 +34,13 @@ struct AirmatesApp: App {
                 // Request notification permission if authenticated
                 if appState.isAuthenticated {
                     _ = await NotificationService.shared.requestPermission()
+                }
+            }
+            .onOpenURL { url in
+                // Catch 3D Secure / bank verification return redirects
+                let handled = StripeAPI.handleURLCallback(with: url)
+                if !handled {
+                    // Future: handle other deep links here (airmates://booking/xxx, etc.)
                 }
             }
         }

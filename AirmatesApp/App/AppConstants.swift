@@ -29,4 +29,9 @@ enum AppConstants {
 
     // Forum categories
     static let forumCategories = ["GENERAL", "SQUAWKS", "TRAINING", "MEETINGS", "SOCIAL", "COMMUNITY"]
+
+    // Stripe — publishable key is client-safe by Stripe's design.
+    // Live key; testing uses a real card with a small amount ($1.00 recommended).
+    static let stripePublishableKey = "pk_live_51T9pQECrasTLI7UJUwZCfBc2MNebACfWvJGRiW8qgv5CHpFKpje0ayA2ssEGo8AOPMIKEGoTVZd1vD0vXsrqbNvX00gMLDibl0"
+    static let stripeReturnURL = "airmates://stripe-redirect"
 }
