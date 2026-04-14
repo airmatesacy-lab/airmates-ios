@@ -1,4 +1,14 @@
 import SwiftUI
+import SafariServices
+
+/// Wraps SFSafariViewController for in-app web payment
+struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+    func updateUIViewController(_ vc: SFSafariViewController, context: Context) {}
+}
 
 struct MyAccountView: View {
     @Environment(AppState.self) private var appState
@@ -9,6 +19,7 @@ struct MyAccountView: View {
     @State private var showCheckIn: Checkout?
     @State private var activeCheckouts: [Checkout] = []
     @State private var showEditProfile = false
+    @State private var showPaymentWeb = false
 
     var body: some View {
         NavigationStack {
@@ -53,6 +64,13 @@ struct MyAccountView: View {
                     ProfileEditView(user: user) { loadData() }
                 }
             }
+            .sheet(isPresented: $showPaymentWeb) {
+                if let slug = appState.currentUser?.orgSlug {
+                    SafariView(url: URL(string: "https://airmatesacy.com/\(slug)/account")!)
+                        .ignoresSafeArea()
+                        .onDisappear { loadData() }
+                }
+            }
             .refreshable { await fetchData() }
         }
         .task { await fetchData() }
@@ -73,6 +91,22 @@ struct MyAccountView: View {
                     Text(data.balance >= 0 ? "Credit" : "Amount Due")
                         .font(.caption)
                         .foregroundColor(.secondary)
+
+                    // Pay Balance button — visible when balance is owed
+                    if data.balance < 0 {
+                        Button {
+                            showPaymentWeb = true
+                        } label: {
+                            Label("Pay Balance", systemImage: "creditcard")
+                                .font(.subheadline.bold())
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.brandBlue)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                        }
+                        .padding(.top, 4)
+                    }
                 }
                 .padding(24)
                 .frame(maxWidth: .infinity)

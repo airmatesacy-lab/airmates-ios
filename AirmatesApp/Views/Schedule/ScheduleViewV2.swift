@@ -255,22 +255,30 @@ struct BookingRowV2: View {
     let booking: Booking
     var currentUserId: String?
 
-    /// My bookings get teal; otherwise color by booking type
-    private var barColor: Color {
-        if let uid = currentUserId, booking.memberId == uid {
-            return .brandTeal
-        }
-        return Color.bookingTypeColor(booking.type)
-    }
-
     private var isMine: Bool {
         if let uid = currentUserId { return booking.memberId == uid }
         return false
     }
 
+    /// Matches web bColor() exactly — status > maintenance > mine > aircraft color > aircraft type > blue
+    private var barColor: Color {
+        Color.bookingColor(
+            type: booking.type,
+            status: booking.status,
+            aircraftType: booking.aircraft?.type,
+            bookingColor: booking.aircraft?.bookingColor,
+            isMine: isMine
+        )
+    }
+
+    /// Badge color for the type label (SOLO=green, DUAL=blue, MAINTENANCE=slate)
+    private var typeBadgeColor: Color {
+        Color.bookingTypeBadgeColor(booking.type)
+    }
+
     var body: some View {
         HStack {
-            // Color bar — teal for mine, type-based for others
+            // Color bar — matches web calendar chip colors
             RoundedRectangle(cornerRadius: 2)
                 .fill(barColor)
                 .frame(width: 4)
@@ -287,8 +295,8 @@ struct BookingRowV2: View {
                             .font(.caption2.bold())
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(Color.brandTeal.opacity(0.15))
-                            .foregroundColor(.brandTeal)
+                            .background(Color.bookingAmber.opacity(0.15))
+                            .foregroundColor(Color(red: 146/255, green: 64/255, blue: 14/255)) // #92400e
                             .cornerRadius(3)
                     }
                 }
@@ -299,16 +307,16 @@ struct BookingRowV2: View {
                         .font(.caption.bold())
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.bookingTypeColor(booking.type).opacity(0.1))
-                        .foregroundColor(Color.bookingTypeColor(booking.type))
+                        .background(typeBadgeColor.opacity(0.1))
+                        .foregroundColor(typeBadgeColor)
                         .cornerRadius(4)
                     if booking.isStandby {
                         Text("STANDBY")
                             .font(.caption2.bold())
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
-                            .background(Color.orange.opacity(0.2))
-                            .foregroundColor(.orange)
+                            .background(Color.bookingYellow.opacity(0.15))
+                            .foregroundColor(Color(red: 161/255, green: 98/255, blue: 7/255)) // #a16207
                             .cornerRadius(3)
                     }
                 }
