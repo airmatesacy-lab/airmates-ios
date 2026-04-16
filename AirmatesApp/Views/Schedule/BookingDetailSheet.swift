@@ -1,4 +1,5 @@
 import SwiftUI
+import EventKit
 
 struct BookingDetailSheet: View {
     let booking: Booking
@@ -16,6 +17,12 @@ struct BookingDetailSheet: View {
     @State private var editType: String
     @State private var editNotes: String
     @State private var isSaving = false
+
+    // Calendar state
+    @State private var pendingCalendarEvent: EKEvent?
+    @State private var showCalendarSheet = false
+    @State private var calendarToastMessage: String?
+    @State private var isRequestingCalendarAccess = false
 
     init(booking: Booking, onUpdate: @escaping () -> Void) {
         self.booking = booking
@@ -93,6 +100,28 @@ struct BookingDetailSheet: View {
                     }
                 }
 
+                if !isEditing {
+                    Section {
+                        Button {
+                            addToCalendar()
+                        } label: {
+                            HStack {
+                                if isRequestingCalendarAccess {
+                                    ProgressView()
+                                        .padding(.trailing, 4)
+                                }
+                                Label("Add to Calendar", systemImage: "calendar.badge.plus")
+                            }
+                        }
+                        .disabled(isRequestingCalendarAccess)
+                        if let msg = calendarToastMessage {
+                            Text(msg)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
                 if canEdit && !isEditing {
                     Section {
                         Button("Cancel Booking", role: .destructive) {
@@ -134,6 +163,53 @@ struct BookingDetailSheet: View {
                 Button("Keep", role: .cancel) {}
             } message: {
                 Text("This cannot be undone.")
+            }
+            .sheet(isPresented: $showCalendarSheet) {
+                if let event = pendingCalendarEvent {
+                    EventEditView(
+                        event: event,
+                        eventStore: CalendarService.shared.eventStore
+                    ) { action in
+                        showCalendarSheet = false
+                        switch action {
+                        case .saved:
+                            calendarToastMessage = "Added to your Calendar."
+                        case .canceled, .deleted:
+                            calendarToastMessage = nil
+                        @unknown default:
+                            calendarToastMessage = nil
+                        }
+                    }
+                    .ignoresSafeArea()
+                }
+            }
+        }
+    }
+
+    func addToCalendar() {
+        calendarToastMessage = nil
+        isRequestingCalendarAccess = true
+        Task { @MainActor in
+            defer { isRequestingCalendarAccess = false }
+            do {
+                let granted = try await CalendarService.shared.requestAccess()
+                guard granted else {
+                    calendarToastMessage = CalendarService.CalendarError.accessDenied.errorDescription
+                    return
+                }
+                guard let event = CalendarService.shared.makeEvent(
+                    from: booking,
+                    currentUserName: appState.currentUser?.name
+                ) else {
+                    calendarToastMessage = CalendarService.CalendarError.invalidBookingDates.errorDescription
+                    return
+                }
+                pendingCalendarEvent = event
+                showCalendarSheet = true
+            } catch let err as CalendarService.CalendarError {
+                calendarToastMessage = err.errorDescription
+            } catch {
+                calendarToastMessage = error.localizedDescription
             }
         }
     }
