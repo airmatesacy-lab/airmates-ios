@@ -27,8 +27,8 @@ struct NextFlightCard: View {
                             .font(.caption.bold())
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.brandBlue.opacity(0.1))
-                            .foregroundColor(.brandBlue)
+                            .background(Color.bookingTypeBadgeColor(booking.type).opacity(0.1))
+                            .foregroundColor(Color.bookingTypeBadgeColor(booking.type))
                             .cornerRadius(4)
                         if booking.isStandby {
                             Text("STANDBY")
@@ -42,6 +42,9 @@ struct NextFlightCard: View {
                     }
                 }
                 Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
         .padding()

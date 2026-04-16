@@ -3,6 +3,7 @@ import SwiftUI
 struct TodayView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = TodayViewModel()
+    @State private var selectedBooking: Booking?
 
     var body: some View {
         NavigationStack {
@@ -28,9 +29,11 @@ struct TodayView: View {
                         WeatherCard(weather: weather)
                     }
 
-                    // Next flight
+                    // Next flight — tap to manage (edit, cancel)
                     if let booking = viewModel.nextBooking {
                         NextFlightCard(booking: booking)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedBooking = booking }
                     }
 
                     // Balance — tap to go to account/payment
@@ -75,6 +78,15 @@ struct TodayView: View {
             .refreshable {
                 viewModel.userId = appState.currentUser?.id
                 await viewModel.loadAll()
+            }
+            .sheet(item: $selectedBooking) { booking in
+                BookingDetailSheet(booking: booking) {
+                    Task {
+                        viewModel.userId = appState.currentUser?.id
+                        await viewModel.loadAll()
+                    }
+                }
+                .environment(appState)
             }
         }
         .task {
