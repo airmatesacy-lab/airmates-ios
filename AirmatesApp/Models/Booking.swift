@@ -14,8 +14,11 @@ struct Booking: Codable, Identifiable, Hashable {
     var notes: String?
     var createdAt: String?
 
-    // Relationships
-    var aircraft: Aircraft?
+    // Relationships — use lightweight BookingAircraft instead of full Aircraft
+    // because some endpoints (e.g. /api/instructors nested bookings) return
+    // only a partial aircraft like { tailNumber } with no id/type, which
+    // can't decode into the full Aircraft model's non-optional fields.
+    var aircraft: BookingAircraft?
     var member: BookingMember?
     var instructor: Instructor?
 
@@ -36,4 +39,16 @@ struct BookingMember: Codable, Hashable {
     var email: String?
     var phone: String?
     var role: String?
+}
+
+/// Lightweight aircraft struct used for nested Booking.aircraft. Some
+/// backend endpoints (e.g. /api/instructors) return a partial shape like
+/// `{ tailNumber }` for nested aircraft, so every field here is optional.
+/// For endpoints that return the full aircraft, all fields populate normally.
+struct BookingAircraft: Codable, Hashable {
+    var id: String?
+    var tailNumber: String?
+    var type: String?
+    var bookingColor: String?
+    var status: String?
 }

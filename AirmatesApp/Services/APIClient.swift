@@ -14,10 +14,40 @@ enum APIError: Error, LocalizedError {
         case .unauthorized: return "Session expired. Please log in again."
         case .serverError(let msg): return msg
         case .networkError(let err): return err.localizedDescription
-        case .decodingError(let err): return "Data error: \(err.localizedDescription)"
+        case .decodingError(let err): return Self.describeDecodingError(err)
         case .conflict(let msg, _): return msg
         case .preconditionRequired(let msg, _): return msg
         case .forbidden(let msg): return msg
+        }
+    }
+
+    /// Turns a DecodingError into a diagnostic message that includes the
+    /// coding path (e.g. "instructors[0].bookings[0].aircraft.id") and the
+    /// missing-or-mismatched context. Much more useful than Swift's default
+    /// "The data couldn't be read because it is missing" string.
+    private static func describeDecodingError(_ err: Error) -> String {
+        guard let decodingErr = err as? DecodingError else {
+            return "Data error: \(err.localizedDescription)"
+        }
+        func pathString(_ keys: [CodingKey]) -> String {
+            keys.map { k in
+                if let idx = k.intValue { return "[\(idx)]" }
+                return k.stringValue
+            }.joined(separator: ".")
+        }
+        switch decodingErr {
+        case .keyNotFound(let key, let ctx):
+            let path = pathString(ctx.codingPath + [key])
+            return "Data error: missing field '\(path)'"
+        case .typeMismatch(let type, let ctx):
+            return "Data error: type mismatch at '\(pathString(ctx.codingPath))' — expected \(type)"
+        case .valueNotFound(let type, let ctx):
+            return "Data error: null value at '\(pathString(ctx.codingPath))' where \(type) was expected"
+        case .dataCorrupted(let ctx):
+            let path = pathString(ctx.codingPath)
+            return "Data error: corrupted at '\(path)' — \(ctx.debugDescription)"
+        @unknown default:
+            return "Data error: \(decodingErr.localizedDescription)"
         }
     }
 }
