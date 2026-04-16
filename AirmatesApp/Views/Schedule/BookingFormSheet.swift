@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BookingFormSheet: View {
-    let selectedDate: Date
+    let initialDate: Date
     let onComplete: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
@@ -9,6 +9,7 @@ struct BookingFormSheet: View {
     @State private var aircraft: [Aircraft] = []
     @State private var instructors: [Instructor] = []
     @State private var members: [MemberSummary] = []
+    @State private var selectedDate: Date
     @State private var selectedAircraftId = ""
     @State private var selectedInstructorId = ""
     @State private var selectedMemberId = "" // "Book For" — admin/instructor only
@@ -21,6 +22,12 @@ struct BookingFormSheet: View {
     @State private var errorMessage: String?
     @State private var showConflictAlert = false
     @State private var conflictMessage = ""
+
+    init(selectedDate: Date, onComplete: @escaping () -> Void) {
+        self.initialDate = selectedDate
+        self.onComplete = onComplete
+        _selectedDate = State(initialValue: selectedDate)
+    }
 
     var isPrivileged: Bool {
         appState.currentUser?.isAdmin == true || appState.currentUser?.isInstructor == true
@@ -47,11 +54,22 @@ struct BookingFormSheet: View {
                     } else {
                         Picker("Aircraft", selection: $selectedAircraftId) {
                             Text("Select...").tag("")
-                            ForEach(aircraft.filter { $0.isAvailable }) { ac in
-                                Text("\(ac.tailNumber) — \(ac.type)").tag(ac.id)
+                            ForEach(aircraft) { ac in
+                                HStack {
+                                    Text("\(ac.tailNumber) — \(ac.type)")
+                                    if !ac.isAvailable {
+                                        Text(ac.isInFlight ? "(Out)" : ac.isInMaintenance ? "(Maint.)" : "")
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .tag(ac.id)
                             }
                         }
                     }
+                }
+
+                Section("Date") {
+                    DatePicker("Date", selection: $selectedDate, displayedComponents: .date)
                 }
 
                 Section("Time") {
@@ -142,6 +160,28 @@ struct BookingFormSheet: View {
         isLoading = false
     }
 
+    /// Convert a local date string + time string to proper UTC ISO 8601.
+    /// The web uses toEST() with Intl.DateTimeFormat to handle DST; the iOS
+    /// equivalent is to let DateFormatter use TimeZone.current (the device's
+    /// timezone, which should match the club's local time since the pilot is
+    /// physically at the airport). This fixes the bug where the iOS app was
+    /// appending "Z" (UTC) to local times, causing bookings to be offset by
+    /// the timezone difference and breaking overlap/conflict detection.
+    private func localToUTC(dateStr: String, timeStr: String) -> String {
+        let local = DateFormatter()
+        local.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        local.timeZone = TimeZone.current
+
+        guard let date = local.date(from: "\(dateStr)T\(timeStr):00") else {
+            // Fallback: return naive UTC (better than crashing)
+            return "\(dateStr)T\(timeStr):00.000Z"
+        }
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return iso.string(from: date)
+    }
+
     private func createBooking(asStandby: Bool) {
         isSubmitting = true
         errorMessage = nil
@@ -149,6 +189,10 @@ struct BookingFormSheet: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateStr = formatter.string(from: selectedDate)
+
+        // Convert local times to proper UTC
+        let startDateISO = localToUTC(dateStr: dateStr, timeStr: startTime)
+        let endDateISO = localToUTC(dateStr: dateStr, timeStr: endTime)
 
         Task {
             do {
@@ -167,8 +211,8 @@ struct BookingFormSheet: View {
 
                 let _: Booking = try await APIClient.shared.post("/api/bookings", body: BookingBody(
                     aircraftId: selectedAircraftId,
-                    startDate: "\(dateStr)T\(startTime):00.000Z",
-                    endDate: "\(dateStr)T\(endTime):00.000Z",
+                    startDate: startDateISO,
+                    endDate: endDateISO,
                     startTime: startTime,
                     endTime: endTime,
                     type: bookingType,
