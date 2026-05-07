@@ -79,28 +79,42 @@ struct ScheduleViewV2: View {
 
     @ViewBuilder
     var monthView: some View {
-        // Calendar
-        DatePicker("Date", selection: $viewModel.selectedDate, displayedComponents: .date)
-            .datePickerStyle(.graphical)
-            .padding(.horizontal)
-            .tint(.brandBlue)
+        // Calendar — UICalendarView wrapper so we can show per-day booking dots
+        CalendarRepresentable(
+            selectedDate: $viewModel.selectedDate,
+            bookedDates: viewModel.bookedDates
+        )
+        .padding(.horizontal)
 
-        // Date chips — show dates that have bookings
+        // Date chips — show dates that have bookings; auto-scroll to selected date
         if !viewModel.bookedDates.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(viewModel.sortedBookedDates, id: \.self) { dateStr in
-                        DateChip(
-                            dateString: dateStr,
-                            isSelected: isSelectedDate(dateStr),
-                            bookingCount: viewModel.bookingCount(for: dateStr)
-                        ) {
-                            selectDate(dateStr)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(viewModel.sortedBookedDates, id: \.self) { dateStr in
+                            DateChip(
+                                dateString: dateStr,
+                                isSelected: isSelectedDate(dateStr),
+                                bookingCount: viewModel.bookingCount(for: dateStr)
+                            ) {
+                                selectDate(dateStr)
+                            }
+                            .id(dateStr)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 6)
+                }
+                .onChange(of: viewModel.selectedDate) { _, newDate in
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd"
+                    let dateStr = formatter.string(from: newDate)
+                    if viewModel.bookedDates.contains(dateStr) {
+                        withAnimation {
+                            proxy.scrollTo(dateStr, anchor: .center)
                         }
                     }
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 6)
             }
         }
 
