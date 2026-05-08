@@ -5,6 +5,7 @@ struct FlyView: View {
     @State private var viewModel = FlyViewModel()
     @State private var showCheckOut = false
     @State private var showCheckIn = false
+    @State private var pendingAircraftId: String?
 
     var body: some View {
         NavigationStack {
@@ -55,8 +56,12 @@ struct FlyView: View {
             }
             .navigationTitle("Fly")
             .refreshable { await viewModel.loadAll(userId: appState.currentUser?.id) }
-            .sheet(isPresented: $showCheckOut) {
-                CheckOutSheet(aircraft: viewModel.aircraft, viewModel: viewModel) {
+            .sheet(isPresented: $showCheckOut, onDismiss: { pendingAircraftId = nil }) {
+                CheckOutSheet(
+                    aircraft: viewModel.aircraft,
+                    viewModel: viewModel,
+                    initialAircraftId: pendingAircraftId
+                ) {
                     Task { await viewModel.loadAll(userId: appState.currentUser?.id) }
                 }
                 .environment(appState)
@@ -71,6 +76,13 @@ struct FlyView: View {
             }
         }
         .task { await viewModel.loadAll(userId: appState.currentUser?.id) }
+        .onChange(of: appState.pendingDeepLink) { _, link in
+            if case .preFlightReminder(_, let aircraftId) = link {
+                pendingAircraftId = aircraftId
+                showCheckOut = true
+                appState.pendingDeepLink = nil
+            }
+        }
     }
 }
 

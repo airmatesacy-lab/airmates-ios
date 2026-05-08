@@ -6,6 +6,7 @@ class AppState {
     var isCheckingAuth = true
     var currentUser: User?
     var errorMessage: String?
+    var pendingDeepLink: DeepLink?
 
     func checkAuth() async {
         isCheckingAuth = true

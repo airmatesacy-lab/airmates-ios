@@ -37,5 +37,13 @@ struct MainTabView: View {
                 .tag("more")
         }
         .tint(.brandBlue)
+        .onChange(of: appState.pendingDeepLink) { _, link in
+            switch link {
+            case .preFlightReminder:
+                selectedTab = "fly"
+            case nil:
+                break
+            }
+        }
     }
 }

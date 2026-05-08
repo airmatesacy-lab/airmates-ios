@@ -28,6 +28,7 @@ struct AirmatesApp: App {
                 }
             }
             .task {
+                delegate.appState = appState
                 await appState.checkAuth()
                 // Register notification categories
                 NotificationService.shared.registerCategories()
@@ -50,6 +51,8 @@ struct AirmatesApp: App {
 // MARK: - App Delegate for APNs
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    var appState: AppState?
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -83,12 +86,31 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return [.banner, .badge, .sound]
     }
 
-    // Handle notification tap (just opens app for now — deep linking in v1.0 (3))
+    // Handle notification tap — org-switch if needed, then route
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        // Future: navigate to specific tab based on notification category
+        let info = response.notification.request.content.userInfo
+        guard
+            let kind = info["kind"] as? String,
+            let orgId = info["orgId"] as? String,
+            let aircraftId = info["aircraftId"] as? String
+        else { return }
+
+        switch kind {
+        case "pre-flight-reminder":
+            if orgId != appState?.currentUser?.organizationId {
+                if let result = try? await AuthService.shared.refreshToken(targetOrgId: orgId) {
+                    await MainActor.run { appState?.currentUser = result.user }
+                }
+            }
+            await MainActor.run {
+                appState?.pendingDeepLink = .preFlightReminder(orgId: orgId, aircraftId: aircraftId)
+            }
+        default:
+            break
+        }
     }
 }
 

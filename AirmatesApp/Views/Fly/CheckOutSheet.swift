@@ -4,6 +4,7 @@ struct CheckOutSheet: View {
     let aircraft: [Aircraft]
     let viewModel: FlyViewModel
     let onComplete: () -> Void
+    var initialAircraftId: String? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     @State private var selectedAircraftId = ""
@@ -119,11 +120,15 @@ struct CheckOutSheet: View {
                 }
             }
             .task {
+                applyInitialAircraft(from: aircraft)
                 if isPrivileged {
                     do {
                         members = try await APIClient.shared.get("/api/members")
                     } catch {}
                 }
+            }
+            .onChange(of: aircraft) { _, newAircraft in
+                applyInitialAircraft(from: newAircraft)
             }
             .sheet(isPresented: $showNoticeSheet) {
                 NoticeAckSheet(
@@ -155,6 +160,13 @@ struct CheckOutSheet: View {
             }
             performCheckOut()
         }
+    }
+
+    func applyInitialAircraft(from list: [Aircraft]) {
+        guard let id = initialAircraftId, selectedAircraftId.isEmpty,
+              let ac = list.first(where: { $0.id == id }) else { return }
+        selectedAircraftId = id
+        tachOut = String(format: "%.1f", ac.tachCurrent ?? 0)
     }
 
     func performCheckOut() {
