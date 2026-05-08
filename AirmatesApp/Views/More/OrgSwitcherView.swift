@@ -2,6 +2,10 @@ import SwiftUI
 
 struct OrgSwitcherView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var switchingId: String?
+    @State private var errorMessage: String?
 
     var body: some View {
         List {
@@ -16,7 +20,9 @@ struct OrgSwitcherView: View {
                                 .foregroundColor(.secondary)
                         }
                         Spacer()
-                        if membership.organizationId == appState.currentUser?.organizationId {
+                        if switchingId == membership.id {
+                            ProgressView()
+                        } else if membership.organizationId == appState.currentUser?.organizationId {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.brandBlue)
                         }
@@ -27,18 +33,30 @@ struct OrgSwitcherView: View {
                     }
                 }
             }
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
         }
         .navigationTitle("Switch Club")
     }
 
-    @State private var errorMessage: String?
-
     func switchOrg(_ membership: OrgMembership) {
+        // Tapping the row for the already-current org is a no-op visually,
+        // but a server round-trip would still happen — short-circuit here so
+        // the UI matches expectations.
+        guard membership.organizationId != appState.currentUser?.organizationId else { return }
+        guard let targetOrgId = membership.organizationId else { return }
+        switchingId = membership.id
+        errorMessage = nil
         Task {
+            defer { switchingId = nil }
             do {
-                let response = try await AuthService.shared.refreshToken()
+                let response = try await AuthService.shared.refreshToken(targetOrgId: targetOrgId)
                 KeychainManager.shared.saveToken(response.token)
                 appState.currentUser = response.user
+                dismiss()
             } catch {
                 errorMessage = "Failed to switch: \(error.localizedDescription)"
             }
