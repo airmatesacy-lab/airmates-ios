@@ -85,6 +85,7 @@ targets:
             CFBundleURLName: com.airmates.app
             CFBundleURLSchemes:
               - airmates
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.airmates.app
