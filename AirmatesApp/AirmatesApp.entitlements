@@ -2,7 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!--
+	  aps-environment varies by build configuration:
+	    Debug   → development (Apple's sandbox APNs gateway)
+	    Release → production  (Apple's production APNs gateway)
+	  The actual value is set via the APS_ENV build setting in project.yml so
+	  Xcode picks the right one automatically at archive time. Without this
+	  split, Distribution-signed archives ship with dev tokens and Apple's
+	  production APNs gateway refuses them — push notifications silently fail
+	  in TestFlight external + App Store releases.
+	-->
 	<key>aps-environment</key>
-	<string>development</string>
+	<string>$(APS_ENV)</string>
 </dict>
 </plist>
