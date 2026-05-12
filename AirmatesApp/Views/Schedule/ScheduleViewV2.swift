@@ -79,11 +79,16 @@ struct ScheduleViewV2: View {
 
     @ViewBuilder
     var monthView: some View {
-        // Calendar — UICalendarView wrapper so we can show per-day booking dots
+        // Calendar — `.fixedSize(vertical: true)` forces CalendarRepresentable
+        // to take its full intrinsic height (5-6 calendar rows). Without it,
+        // the parent VStack compresses the calendar when sibling views
+        // (chips, bookings list) compete for vertical space, clipping after
+        // week 3. Reported by Darren 2026-05-12 (May 2026 cut off after 16th).
         CalendarRepresentable(
             selectedDate: $viewModel.selectedDate,
             bookedDates: viewModel.bookedDates
         )
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal)
 
         // Date chips — show dates that have bookings; auto-scroll to selected date
@@ -120,7 +125,7 @@ struct ScheduleViewV2: View {
 
         Divider()
 
-        // Day's bookings
+        // Day's bookings — kept as a List so swipe-to-cancel still works.
         if viewModel.isLoading {
             LoadingView(message: "Loading bookings...")
         } else if viewModel.selectedDayBookings.isEmpty {
