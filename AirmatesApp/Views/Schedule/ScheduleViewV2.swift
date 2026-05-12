@@ -64,10 +64,6 @@ struct ScheduleViewV2: View {
                 })
                 .environment(appState)
             }
-            .refreshable {
-                await viewModel.fetchBookings()
-                await viewModel.fetchMonthBookings()
-            }
         }
         .task {
             await viewModel.fetchBookings()
@@ -76,66 +72,118 @@ struct ScheduleViewV2: View {
     }
 
     // MARK: - Month View
+    //
+    // Single-List design. Calendar, chips, and bookings all live as sections
+    // inside ONE scrollable List so:
+    //   - Calendar (CalendarRepresentable) gets its full intrinsic height in
+    //     its row — no .fixedSize hack, no parent VStack compressing it.
+    //   - Bookings list below is always reachable by scrolling.
+    //   - .swipeActions still works because bookings remain List rows.
+    //   - .refreshable attaches to the List directly per Apple Refreshable
+    //     docs.
+    // History: first fix (.fixedSize) clipped bookings on small phones; this
+    // is the corrected design per Plan-agent 2026-05-12.
 
     @ViewBuilder
     var monthView: some View {
-        // Calendar — `.fixedSize(vertical: true)` forces CalendarRepresentable
-        // to take its full intrinsic height (5-6 calendar rows). Without it,
-        // the parent VStack compresses the calendar when sibling views
-        // (chips, bookings list) compete for vertical space, clipping after
-        // week 3. Reported by Darren 2026-05-12 (May 2026 cut off after 16th).
-        CalendarRepresentable(
-            selectedDate: $viewModel.selectedDate,
-            bookedDates: viewModel.bookedDates
-        )
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal)
+        List {
+            // Section 1 — calendar
+            Section {
+                CalendarRepresentable(
+                    selectedDate: $viewModel.selectedDate,
+                    bookedDates: viewModel.bookedDates
+                )
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
 
-        // Date chips — show dates that have bookings; auto-scroll to selected date
-        if !viewModel.bookedDates.isEmpty {
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(viewModel.sortedBookedDates, id: \.self) { dateStr in
-                            DateChip(
-                                dateString: dateStr,
-                                isSelected: isSelectedDate(dateStr),
-                                bookingCount: viewModel.bookingCount(for: dateStr)
-                            ) {
-                                selectDate(dateStr)
+            // Section 2 — date chips for booked dates (auto-scroll to selection)
+            if !viewModel.bookedDates.isEmpty {
+                Section {
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(viewModel.sortedBookedDates, id: \.self) { dateStr in
+                                    DateChip(
+                                        dateString: dateStr,
+                                        isSelected: isSelectedDate(dateStr),
+                                        bookingCount: viewModel.bookingCount(for: dateStr)
+                                    ) {
+                                        selectDate(dateStr)
+                                    }
+                                    .id(dateStr)
+                                }
                             }
-                            .id(dateStr)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                        }
+                        .onChange(of: viewModel.selectedDate) { _, newDate in
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "yyyy-MM-dd"
+                            let dateStr = formatter.string(from: newDate)
+                            if viewModel.bookedDates.contains(dateStr) {
+                                withAnimation {
+                                    proxy.scrollTo(dateStr, anchor: .center)
+                                }
+                            }
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 6)
-                }
-                .onChange(of: viewModel.selectedDate) { _, newDate in
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "yyyy-MM-dd"
-                    let dateStr = formatter.string(from: newDate)
-                    if viewModel.bookedDates.contains(dateStr) {
-                        withAnimation {
-                            proxy.scrollTo(dateStr, anchor: .center)
-                        }
-                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
+
+            // Section 3 — bookings for selected day
+            Section {
+                if viewModel.isLoading && viewModel.selectedDayBookings.isEmpty {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .padding(.vertical, 24)
+                        Spacer()
+                    }
+                    .listRowSeparator(.hidden)
+                } else if viewModel.selectedDayBookings.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.title2)
+                            .foregroundColor(.secondary.opacity(0.6))
+                        Text("No bookings for this date.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                } else {
+                    ForEach(viewModel.selectedDayBookings) { booking in
+                        BookingRowV2(booking: booking, currentUserId: appState.currentUser?.id)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedBooking = booking }
+                            .swipeActions(edge: .trailing) {
+                                if booking.memberId == appState.currentUser?.id
+                                    || appState.currentUser?.isAdmin == true {
+                                    Button("Cancel", role: .destructive) {
+                                        Task { await viewModel.cancelBooking(booking) }
+                                    }
+                                }
+                            }
+                    }
+                }
+            } header: {
+                Text(headerLabel(for: viewModel.selectedDate))
+            }
         }
-
-        Divider()
-
-        // Day's bookings — kept as a List so swipe-to-cancel still works.
-        if viewModel.isLoading {
-            LoadingView(message: "Loading bookings...")
-        } else if viewModel.selectedDayBookings.isEmpty {
-            EmptyStateView(
-                icon: "calendar.badge.plus",
-                title: "No Bookings",
-                message: "No bookings for this date."
-            )
-        } else {
-            bookingsList(viewModel.selectedDayBookings)
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .refreshable {
+            await viewModel.fetchBookings()
+            await viewModel.fetchMonthBookings()
         }
     }
 
@@ -169,27 +217,14 @@ struct ScheduleViewV2: View {
                 }
             }
             .listStyle(.plain)
+            .refreshable {
+                await viewModel.fetchBookings()
+                await viewModel.fetchMonthBookings()
+            }
         }
     }
 
     // MARK: - Shared
-
-    @ViewBuilder
-    func bookingsList(_ bookings: [Booking]) -> some View {
-        List(bookings) { booking in
-            BookingRowV2(booking: booking, currentUserId: appState.currentUser?.id)
-                .contentShape(Rectangle())
-                .onTapGesture { selectedBooking = booking }
-                .swipeActions(edge: .trailing) {
-                    if booking.memberId == appState.currentUser?.id || appState.currentUser?.isAdmin == true {
-                        Button("Cancel", role: .destructive) {
-                            Task { await viewModel.cancelBooking(booking) }
-                        }
-                    }
-                }
-        }
-        .listStyle(.plain)
-    }
 
     struct BookingGroup {
         let date: Date
@@ -229,6 +264,12 @@ struct ScheduleViewV2: View {
         if let date = formatter.date(from: dateStr) {
             viewModel.selectedDate = date
         }
+    }
+
+    private func headerLabel(for date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMM d"
+        return f.string(from: date)
     }
 }
 
