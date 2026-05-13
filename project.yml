@@ -93,6 +93,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.airmates.app
         CURRENT_PROJECT_VERSION: 20
         MARKETING_VERSION: "1.0"
+        CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: V34FFS732V
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: AirmatesApp/AirmatesApp.entitlements
@@ -104,18 +105,11 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
           - "@executable_path/Frameworks"
-      configs:
-        # Debug — keep automatic signing for simulator + device dev builds.
-        # Xcode picks the Development cert + Development provisioning profile.
-        Debug:
-          CODE_SIGN_STYLE: Automatic
-        # Release — manual signing pinned to Distribution cert + Store profile.
-        # Automatic signing was incorrectly selecting the Development cert for
-        # Release archives (build 18 and 19), causing aps-environment to lock
-        # to development and get-task-allow=true, both of which would be
-        # rejected at App Store + External TestFlight Beta App Review. Pinning
-        # explicitly here forces Distribution signing on every archive.
-        Release:
-          CODE_SIGN_STYLE: Manual
-          CODE_SIGN_IDENTITY: "Apple Distribution"
-          PROVISIONING_PROFILE_SPECIFIER: "iOS Team Store Provisioning Profile: com.airmates.app"
+      # Note: CODE_SIGN_STYLE is set in settings.base above (Automatic).
+      # Forcing CODE_SIGN_IDENTITY for Release here causes Xcode to error
+      # ("automatically signed for development, but conflicting identity
+      # manually specified"). Manual signing with the Xcode-managed Store
+      # profile is also disallowed ("Xcode-managed profile, but signing
+      # settings require manually managed"). Both routes blocked by Xcode's
+      # auto-signing rules. The durable fix is Xcode Cloud (Apple-managed
+      # signing pipeline) — tracked separately.
