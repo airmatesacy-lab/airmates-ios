@@ -43,6 +43,21 @@ extension DateFormatter {
         f.dateFormat = "EEEE, MMMM d, yyyy"
         return f
     }()
+
+    /// "yyyy-MM-dd" in the device's local time zone — for day-keying bookings.
+    static let yyyyMMdd: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
+    /// "MMM d" (e.g. "May 15") — for compact multi-day schedule labels.
+    static let monthDay: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }()
 }
 
 extension String {
@@ -72,5 +87,23 @@ extension Double {
 
     var asHours: String {
         String(format: "%.1fh", self)
+    }
+}
+
+extension Date {
+    /// Combines this date's calendar day with an "HH:mm" wall-clock time
+    /// (interpreted in the device's time zone) into the UTC ISO-8601 string
+    /// the bookings API expects.
+    func bookingISO(atTime timeStr: String) -> String {
+        let dateStr = DateFormatter.yyyyMMdd.string(from: self)
+        let local = DateFormatter()
+        local.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        local.timeZone = .current
+        guard let combined = local.date(from: "\(dateStr)T\(timeStr):00") else {
+            return "\(dateStr)T\(timeStr):00.000Z"
+        }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return iso.string(from: combined)
     }
 }

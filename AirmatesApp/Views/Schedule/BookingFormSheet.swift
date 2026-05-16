@@ -10,6 +10,7 @@ struct BookingFormSheet: View {
     @State private var instructors: [Instructor] = []
     @State private var members: [MemberSummary] = []
     @State private var selectedDate: Date
+    @State private var selectedEndDate: Date
     @State private var selectedAircraftId = ""
     @State private var selectedInstructorId = ""
     @State private var selectedMemberId = "" // "Book For" — admin/instructor only
@@ -28,10 +29,16 @@ struct BookingFormSheet: View {
         self.initialDate = selectedDate
         self.onComplete = onComplete
         _selectedDate = State(initialValue: selectedDate)
+        _selectedEndDate = State(initialValue: selectedDate)
     }
 
     var isPrivileged: Bool {
         appState.currentUser?.isAdmin == true || appState.currentUser?.isInstructor == true
+    }
+
+    /// True when the booking spans more than one calendar day.
+    var isMultiDay: Bool {
+        !Calendar.current.isDate(selectedDate, inSameDayAs: selectedEndDate)
     }
 
     /// Members available to add as shared flight participants
@@ -80,8 +87,21 @@ struct BookingFormSheet: View {
                     }
                 }
 
-                Section("Date") {
-                    DatePicker("Date", selection: $selectedDate, displayedComponents: .date)
+                Section {
+                    DatePicker("Start Date", selection: $selectedDate, displayedComponents: .date)
+                        .onChange(of: selectedDate) { _, newStart in
+                            // Keep the end date on or after the start date.
+                            if selectedEndDate < newStart {
+                                selectedEndDate = newStart
+                            }
+                        }
+                    DatePicker("End Date", selection: $selectedEndDate, in: selectedDate..., displayedComponents: .date)
+                } header: {
+                    Text("Date")
+                } footer: {
+                    if isMultiDay {
+                        Text("Heads up — this reserves the aircraft continuously from \(startTime) on \(selectedDate.formatted(date: .abbreviated, time: .omitted)) to \(endTime) on \(selectedEndDate.formatted(date: .abbreviated, time: .omitted)), not \(startTime)\u{2013}\(endTime) each day. For a daily window, create separate single-day bookings.")
+                    }
                 }
 
                 Section("Time") {
@@ -233,31 +253,12 @@ struct BookingFormSheet: View {
         isLoading = false
     }
 
-    /// Convert a local date string + time string to proper UTC ISO 8601.
-    private func localToUTC(dateStr: String, timeStr: String) -> String {
-        let local = DateFormatter()
-        local.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        local.timeZone = TimeZone.current
-
-        guard let date = local.date(from: "\(dateStr)T\(timeStr):00") else {
-            return "\(dateStr)T\(timeStr):00.000Z"
-        }
-
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return iso.string(from: date)
-    }
-
     private func createBooking(asStandby: Bool) {
         isSubmitting = true
         errorMessage = nil
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let dateStr = formatter.string(from: selectedDate)
-
-        let startDateISO = localToUTC(dateStr: dateStr, timeStr: startTime)
-        let endDateISO = localToUTC(dateStr: dateStr, timeStr: endTime)
+        let startDateISO = selectedDate.bookingISO(atTime: startTime)
+        let endDateISO = selectedEndDate.bookingISO(atTime: endTime)
 
         Task {
             do {

@@ -20,7 +20,7 @@ struct NextFlightCard: View {
                     Text(booking.aircraft?.type ?? "")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    Text(booking.formattedDateRange)
+                    Text(booking.formattedDateTime)
                         .font(.subheadline)
                     HStack(spacing: 4) {
                         Text(booking.type)

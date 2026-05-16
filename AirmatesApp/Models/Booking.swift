@@ -26,10 +26,63 @@ struct Booking: Codable, Identifiable, Hashable {
     var isConfirmed: Bool { status == "CONFIRMED" }
     var isStandby: Bool { status == "STANDBY" }
 
+    /// The booking's date, or a date range when it spans more than one day.
+    /// e.g. "May 15, 2026" — or "May 15, 2026 – May 17, 2026".
     var formattedDateRange: String {
-        let start = DateFormatter.apiDate.date(from: startDate)
-        let formatted = start.map { DateFormatter.display.string(from: $0) } ?? startDate
-        return "\(formatted) \(startTime)–\(endTime)"
+        guard let start = startDate.toDate() else {
+            return startDate
+        }
+        let startText = DateFormatter.display.string(from: start)
+        guard
+            let end = endDate.toDate(),
+            !Calendar.current.isDate(start, inSameDayAs: end)
+        else {
+            return startText
+        }
+        return "\(startText) \u{2013} \(DateFormatter.display.string(from: end))"
+    }
+
+    /// Date plus the start/end times, for compact contexts that have no
+    /// separate time row (e.g. the Today tab's Next Flight card).
+    var formattedDateTime: String {
+        "\(formattedDateRange) \(startTime)\u{2013}\(endTime)"
+    }
+
+    /// Every calendar day (device-local, "yyyy-MM-dd") the booking occupies,
+    /// inclusive of the start and end day. A single-day booking yields one
+    /// entry; a multi-day booking yields one per day it spans. Empty if the
+    /// dates can't be parsed.
+    var coveredDayStrings: [String] {
+        guard let start = startDate.toDate(), let end = endDate.toDate() else {
+            return []
+        }
+        let calendar = Calendar.current
+        var day = calendar.startOfDay(for: start)
+        let lastDay = calendar.startOfDay(for: end)
+        guard day <= lastDay else { return [] }
+        var days: [String] = []
+        while day <= lastDay {
+            days.append(DateFormatter.yyyyMMdd.string(from: day))
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+        return days
+    }
+
+    /// Compact start→end label for schedule rows. A single-day booking shows
+    /// just the times ("09:30 – 10:00"); a multi-day booking includes the
+    /// dates ("May 15 09:30 – May 17 10:00").
+    var scheduleTimeLabel: String {
+        guard
+            let start = startDate.toDate(),
+            let end = endDate.toDate(),
+            !Calendar.current.isDate(start, inSameDayAs: end)
+        else {
+            return "\(startTime) \u{2013} \(endTime)"
+        }
+        let startDay = DateFormatter.monthDay.string(from: start)
+        let endDay = DateFormatter.monthDay.string(from: end)
+        return "\(startDay) \(startTime) \u{2013} \(endDay) \(endTime)"
     }
 }
 

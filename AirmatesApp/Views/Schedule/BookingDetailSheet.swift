@@ -12,6 +12,8 @@ struct BookingDetailSheet: View {
     @State private var errorMessage: String?
 
     // Edit state
+    @State private var editStartDate: Date
+    @State private var editEndDate: Date
     @State private var editStartTime: String
     @State private var editEndTime: String
     @State private var editType: String
@@ -27,6 +29,8 @@ struct BookingDetailSheet: View {
     init(booking: Booking, onUpdate: @escaping () -> Void) {
         self.booking = booking
         self.onUpdate = onUpdate
+        _editStartDate = State(initialValue: booking.startDate.toDate() ?? Date())
+        _editEndDate = State(initialValue: booking.endDate.toDate() ?? Date())
         _editStartTime = State(initialValue: booking.startTime)
         _editEndTime = State(initialValue: booking.endTime)
         _editType = State(initialValue: booking.type)
@@ -47,9 +51,15 @@ struct BookingDetailSheet: View {
             List {
                 Section("Flight Details") {
                     LabeledContent("Aircraft", value: "\(booking.aircraft?.tailNumber ?? "") \(booking.aircraft?.type ?? "")")
-                    LabeledContent("Date", value: booking.formattedDateRange)
-
                     if isEditing {
+                        DatePicker("Start Date", selection: $editStartDate, displayedComponents: .date)
+                            .onChange(of: editStartDate) { _, newStart in
+                                // Keep the end date on or after the start date.
+                                if editEndDate < newStart {
+                                    editEndDate = newStart
+                                }
+                            }
+                        DatePicker("End Date", selection: $editEndDate, in: editStartDate..., displayedComponents: .date)
                         Picker("Start", selection: $editStartTime) {
                             ForEach(AppConstants.timeSlots, id: \.self) { t in Text(t).tag(t) }
                         }
@@ -62,6 +72,7 @@ struct BookingDetailSheet: View {
                             Text("Maintenance").tag("MAINTENANCE")
                         }
                     } else {
+                        LabeledContent("Date", value: booking.formattedDateRange)
                         LabeledContent("Time", value: "\(booking.startTime) \u{2013} \(booking.endTime)")
                         LabeledContent("Type", value: booking.type)
                     }
@@ -220,6 +231,8 @@ struct BookingDetailSheet: View {
         Task {
             struct UpdateBody: Encodable {
                 let id: String
+                let startDate: String
+                let endDate: String
                 let startTime: String
                 let endTime: String
                 let type: String
@@ -228,6 +241,8 @@ struct BookingDetailSheet: View {
             do {
                 let _: Booking = try await APIClient.shared.patch("/api/bookings", body: UpdateBody(
                     id: booking.id,
+                    startDate: editStartDate.bookingISO(atTime: editStartTime),
+                    endDate: editEndDate.bookingISO(atTime: editEndTime),
                     startTime: editStartTime,
                     endTime: editEndTime,
                     type: editType,

@@ -10,14 +10,11 @@ class ScheduleViewModel {
 
     // Dates that have bookings (for calendar dots)
     var bookedDates: Set<String> {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return Set(monthBookings.compactMap { booking in
-            if let date = DateFormatter.apiDate.date(from: booking.startDate) {
-                return formatter.string(from: date)
-            }
-            return nil
-        })
+        var dates = Set<String>()
+        for booking in monthBookings {
+            dates.formUnion(booking.coveredDayStrings)
+        }
+        return dates
     }
 
     // Sorted dates that have bookings (for date chips)
@@ -27,27 +24,13 @@ class ScheduleViewModel {
 
     // Count bookings for a specific date
     func bookingCount(for dateStr: String) -> Int {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return monthBookings.filter { booking in
-            if let date = DateFormatter.apiDate.date(from: booking.startDate) {
-                return formatter.string(from: date) == dateStr
-            }
-            return false
-        }.count
+        monthBookings.filter { $0.coveredDayStrings.contains(dateStr) }.count
     }
 
     // Bookings for the selected day only
     var selectedDayBookings: [Booking] {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let selectedStr = formatter.string(from: selectedDate)
-        return monthBookings.filter { booking in
-            if let date = DateFormatter.apiDate.date(from: booking.startDate) {
-                return formatter.string(from: date) == selectedStr
-            }
-            return false
-        }
+        let selectedStr = DateFormatter.yyyyMMdd.string(from: selectedDate)
+        return monthBookings.filter { $0.coveredDayStrings.contains(selectedStr) }
     }
 
     func fetchBookings() async {

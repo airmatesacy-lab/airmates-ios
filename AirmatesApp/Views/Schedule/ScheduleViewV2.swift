@@ -237,14 +237,16 @@ struct ScheduleViewV2: View {
         let display = DateFormatter()
         display.dateFormat = "EEEE, MMM d"
 
+        // Group by every day a booking covers, so a multi-day booking shows
+        // under each day it spans (not just its start day).
         var dateMap: [String: (date: Date, bookings: [Booking])] = [:]
         for booking in viewModel.monthBookings {
-            if let date = DateFormatter.apiDate.date(from: booking.startDate) {
-                let key = booking.startDate // yyyy-MM-dd — sortable
-                if dateMap[key] != nil {
-                    dateMap[key]!.bookings.append(booking)
+            for dayStr in booking.coveredDayStrings {
+                guard let day = DateFormatter.yyyyMMdd.date(from: dayStr) else { continue }
+                if dateMap[dayStr] != nil {
+                    dateMap[dayStr]!.bookings.append(booking)
                 } else {
-                    dateMap[key] = (date: date, bookings: [booking])
+                    dateMap[dayStr] = (date: day, bookings: [booking])
                 }
             }
         }
@@ -371,7 +373,7 @@ struct BookingRowV2: View {
                     }
                 }
                 HStack {
-                    Text("\(booking.startTime) \u{2013} \(booking.endTime)")
+                    Text(booking.scheduleTimeLabel)
                         .font(.subheadline)
                     Text(booking.type)
                         .font(.caption.bold())
